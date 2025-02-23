@@ -331,6 +331,9 @@ if ticker:
         st.write("**Cash Flow Statement**")
         st.dataframe(stock.cashflow)
 
+         url = f"https://finance.yahoo.com/quote/{ticker}/filings"
+         st.markdown(f"📄 **[View Official SEC Filings (10-K Reports)]({url})**", unsafe_allow_html=True)
+
     elif menu =="Statistical Analysis":
         option = st.selectbox(
             "Choose a statistical test to run:",
@@ -358,28 +361,6 @@ if ticker:
                 autocorrelation(returns)
             elif option == "PACF":
                 partial_autocorrelation(returns)
-
-
-    elif menu == "Paper Trading":
-        st.title("Paper Trading Simulator")
-        action = st.radio("Buy or Sell", ["Buy", "Sell"])
-        shares = st.number_input("Enter Number of Shares", min_value=1, value=10)
-
-        if st.button("Execute Trade"):
-            price = stock.history(period="1d")["Close"].iloc[-1]
-            total_cost = price * shares
-
-            if action == "Buy":
-                st.session_state.portfolio[ticker] = st.session_state.portfolio.get(ticker, 0) + shares
-                st.success(f"✅ Bought {shares} shares of {ticker} at ${price:.2f}")
-            elif action == "Sell":
-                if ticker in st.session_state.portfolio and st.session_state.portfolio[ticker] >= shares:
-                    st.session_state.portfolio[ticker] -= shares
-                    st.success(f"✅ Sold {shares} shares of {ticker} at ${price:.2f}")
-                else:
-                    st.error("❌ Not enough shares to sell!")
-
-        st.write("Your Portfolio:", st.session_state.portfolio)
 
     # 🤖 **Stock Recommendations**
     elif menu == "Recommendations":
