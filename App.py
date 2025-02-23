@@ -331,7 +331,7 @@ if ticker:
         st.write("**Cash Flow Statement**")
         st.dataframe(stock.cashflow)
 
-        url = f"https://finance.yahoo.com/quote/{ticker}/filings"
+        url = f"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={ticker}&type=10-K"
         st.markdown(f"📄 **[View Official SEC Filings (10-K Reports)]({url})**", unsafe_allow_html=True)
 
     elif menu =="Statistical Analysis":
