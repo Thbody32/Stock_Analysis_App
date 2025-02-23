@@ -236,7 +236,7 @@ if ticker:
         - Live Stock Prices 
         - Options Chain Data 
         - Financial Statements 
-        - Virtual Paper Trading 
+        - Statistical Analysis
         - AI-Based Stock Recommendations 
         """)
 
