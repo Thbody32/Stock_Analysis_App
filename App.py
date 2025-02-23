@@ -96,13 +96,14 @@ def OptionPrice_FDM_Explicit(S0, K, r, sigma, T, Smax, m, n, option_type):
     #return the price with S = S0
     return price(S0)
 
-def black_scholes(S, K, T, r, sigma, option_type="call"):
+def black_scholes(S, K, T, r, sigma, option_type):
     d1 = ((np.log(S / K) + (r + 0.5 * sigma ** 2) * T)) / (sigma * np.sqrt(T))
     d2 = d1 - sigma * np.sqrt(T)
-    if option_type == "call":
-        return S * norm.cdf(d1) - (K * np.exp(-r * T) * norm.cdf(d2))
+    if option_type == "Call":
+        price = S * norm.cdf(d1) - (K * np.exp(-r * T) * norm.cdf(d2))
     else:
-        return K * np.exp(-r * T) * norm.cdf(-d1)
+        price = K * np.exp(-r * T) * norm.cdf(-d1)
+    return price
 
 def binomial_tree(S, K, T, r, sigma, N, option_type):
     """
