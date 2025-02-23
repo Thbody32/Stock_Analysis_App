@@ -71,14 +71,14 @@ def OptionPrice_FDM_Explicit(S0, K, r, sigma, T, Smax, m, n, option_type):
     ii = S / dS
 
     #boundary conditions
-    if option_type == 'call':
+    if option_type == 'Call':
         P[m, :] = [Smax - K * np.exp(r * ( n - j) * dt) for j in range(n + 1)]
-    if option_type == 'put':
+    if option_type == 'Put':
         P[0, :] = [K * np.exp(-r * ( n - j) * dt) for j in range(n + 1)]
     #terminal conditions
-    if option_type == 'call':
+    if option_type == 'Call':
         P[:, n] = np.array(np.maximum(0, S - K))
-    if option_type == 'put':
+    if option_type == 'Put':
         P[:, n] = np.array(np.maximum(0, K - S))
         #the coefficients
 
@@ -100,10 +100,9 @@ def black_scholes(S, K, T, r, sigma, option_type):
     d1 = ((np.log(S / K) + (r + 0.5 * sigma ** 2) * T)) / (sigma * np.sqrt(T))
     d2 = d1 - sigma * np.sqrt(T)
     if option_type == "Call":
-        price = S * norm.cdf(d1) - (K * np.exp(-r * T) * norm.cdf(d2))
+        return S * norm.cdf(d1) - (K * np.exp(-r * T) * norm.cdf(d2))
     else:
-        price = K * np.exp(-r * T) * norm.cdf(-d1)
-    return price
+        return K * np.exp(-r * T) * norm.cdf(-d1)
 
 def binomial_tree(S, K, T, r, sigma, N, option_type):
     """
@@ -130,16 +129,16 @@ def binomial_tree(S, K, T, r, sigma, N, option_type):
     option_tree = np.zeros((N + 1, N + 1))
 
     # Terminal Payoff
-    if option_type == "call":
+    if option_type == "Call":
         option_tree[:, N] = np.maximum(stock_tree[:, N] - K, 0)
-    elif option_type == "put":
+    elif option_type == "Put":
         option_tree[:, N] = np.maximum(K - stock_tree[:, N], 0)
 
     # Backward induction to calculate option price
     for i in range(N - 1, -1, -1):
         for j in range(i + 1):
             continuation_value = np.exp(-r * dt) * (p * option_tree[j, i + 1] + (1 - p) * option_tree[j + 1, i + 1])
-            if option_type == "call":
+            if option_type == "Call":
                 exercise_value = stock_tree[j, i] - K
             else:
                 exercise_value = K - stock_tree[j, i]
@@ -147,12 +146,12 @@ def binomial_tree(S, K, T, r, sigma, N, option_type):
 
     return round(option_tree[0, 0], 4)
 
-def delta(S, K, T, r, sigma, option_type="call"):
+def delta(S, K, T, r, sigma, option_type="Call"):
     try:
         d1 = (np.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
-        if option_type == "call":
+        if option_type == "Call":
             return norm.cdf(d1)
-        elif option_type == "put":
+        elif option_type == "Put":
             return norm.cdf(d1) - 1
     except Exception as e:
         st.warning(f"Error calculating Delta: {e}")
