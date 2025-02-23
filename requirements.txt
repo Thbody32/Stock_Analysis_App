@@ -3,6 +3,7 @@ matplotlib
 matplotlib-inline
 numpy
 option-price
+Options_Pricing_Methods
 scipy
 seaborn
 statsmodels
