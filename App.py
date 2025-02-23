@@ -331,8 +331,8 @@ if ticker:
         st.write("**Cash Flow Statement**")
         st.dataframe(stock.cashflow)
 
-         url = f"https://finance.yahoo.com/quote/{ticker}/filings"
-         st.markdown(f"📄 **[View Official SEC Filings (10-K Reports)]({url})**", unsafe_allow_html=True)
+        url = f"https://finance.yahoo.com/quote/{ticker}/filings"
+        st.markdown(f"📄 **[View Official SEC Filings (10-K Reports)]({url})**", unsafe_allow_html=True)
 
     elif menu =="Statistical Analysis":
         option = st.selectbox(
