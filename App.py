@@ -2,10 +2,149 @@ import streamlit as st
 import yfinance as yf
 import numpy as np
 from scipy.stats import norm
-from Options_Pricing_Methods import black_scholes, binomial_tree, OptionPrice_FDM_Explicit
-from Statistical_Tests import garch_model, egarch_model, kde_estimation, value_at_risk, autocorrelation, partial_autocorrelation, sharpe_ratio, qq_plot
+from scipy.interpolate import interp1d
+import statsmodels.api as sm
+from statsmodels.graphics.tsaplots import plot_pacf
+from arch import arch_model
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-# Greeks calculation functions
+def garch_model(data):
+    model = arch_model(data, vol='Garch', p=1, q=1)
+    model_fit = model.fit(disp="off")
+    st.write("GARCH Model Summary:")
+    st.write(model_fit.summary())
+
+# Function for EGARCH model
+def egarch_model(data):
+    model = arch_model(data, vol='EGarch', p=1, q=1)
+    model_fit = model.fit(disp="off")
+    st.write("EGARCH Model Summary:")
+    st.write(model_fit.summary())
+
+# Function for QQ Plot
+def qq_plot(data):
+    fig= plt.figure()
+    sm.qqplot(data, line ='45', ax = fig.add_subplot(111))
+    st.title("QQ-Plot")
+    st.pyplot(fig)
+
+# Function for KDE Estimation
+def kde_estimation(data):
+    fig = plt.figure()
+    sns.kdeplot(data)
+    st.title("Kernel Density Estimate")
+    st.pyplot(fig)
+
+# Function for Sharpe Ratio
+def sharpe_ratio(returns, risk_free_rate=0):
+    excess_returns = returns - risk_free_rate
+    sharpe = excess_returns.mean() / excess_returns.std()
+    st.write(f"Sharpe Ratio: {sharpe:.2f}")
+
+# Function for Value at Risk (VaR)
+def value_at_risk(data, confidence_level=0.95):
+    var = np.percentile(data, (1 - confidence_level) * 100)
+    st.write(f"Value at Risk (VaR) at {confidence_level*100}% confidence: {var:.2f}")
+
+# Function for ACF (Autocorrelation Function)
+def autocorrelation(data):
+    fig, ax = plt.subplots()
+    sm.graphics.tsa.plot_acf(data, lags=3, ax=ax)
+    st.title("Autocorrelation Function (ACF)")
+    st.pyplot(fig)
+
+# Function for PACF (Partial Autocorrelation Function)
+def partial_autocorrelation(data):
+    fig, ax = plt.subplots(figsize=(10, 6))
+    plot_pacf(data, lags=10, method='ywm', ax=ax)
+    ax.set_title('PACF of Stock Returns')
+
+    # Display the plot using Streamlit
+    st.pyplot(fig)
+def OptionPrice_FDM_Explicit(S0, K, r, sigma, T, Smax, m, n, option_type):
+    #initialisation and parameters
+    P  = np.zeros((m + 1, n + 1))
+    S =  np.linspace(0, Smax, m + 1)
+    dS = Smax / m
+    dt= T / n
+    ii = S / dS
+
+    #boundary conditions
+    if option_type == 'call':
+        P[m, :] = [Smax - K * np.exp(r * ( n - j) * dt) for j in range(n + 1)]
+    if option_type == 'put':
+        P[0, :] = [K * np.exp(-r * ( n - j) * dt) for j in range(n + 1)]
+    #terminal conditions
+    if option_type == 'call':
+        P[:, n] = np.array(np.maximum(0, S - K))
+    if option_type == 'put':
+        P[:, n] = np.array(np.maximum(0, K - S))
+        #the coefficients
+
+    a = .5 * (-r * ii + (sigma * ii)**2) * dt
+    b = ((sigma * ii)**2 + r) * dt
+    c = .5 * (r * ii + (sigma * ii)**2) * dt
+
+    for j in range(n-1, -1, -1):
+        for i in range(1, m):
+            P[i, j] = a[i] * P[i - 1, j + 1] \
+                      + (1 - b[i]) * P[i, j + 1] + c[i] * P[i + 1, j + 1]
+
+        #linear interpolation to get the price
+    price = interp1d(S, P[:, 0])
+    #return the price with S = S0
+    return price(S0)
+
+def black_scholes(S, K, T, r, sigma, option_type="call"):
+    d1 = (np.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
+    d2 = d1 - sigma * np.sqrt(T)
+    if option_type == "call":
+        return S * norm.cdf(d1) - K * np.exp(-r * T) * norm.cdf(d2)
+    else:
+        return K * np.exp(-r * T) * norm.cdf(-d1)
+
+def binomial_tree(S, K, T, r, sigma, N, option_type):
+    """
+    S: Stock price
+    K: Strike price
+    T: Time to expiration (years)
+    r: Risk-free rate (decimal)
+    sigma: Volatility (decimal)
+    N: Number of time steps
+    option_type: "call" or "put"
+    """
+    dt = T / N  # Time step size
+    u = np.exp(sigma * np.sqrt(dt))  # Up factor
+    d = 1 / u  # Down factor
+    p = (np.exp(r * dt) - d) / (u - d)  # Risk-neutral probability
+
+    # Stock price tree
+    stock_tree = np.zeros((N + 1, N + 1))
+    for i in range(N + 1):
+        for j in range(i + 1):
+            stock_tree[j, i] = S * (u ** (i - j)) * (d ** j)
+
+    # Option value tree
+    option_tree = np.zeros((N + 1, N + 1))
+
+    # Terminal Payoff
+    if option_type == "call":
+        option_tree[:, N] = np.maximum(stock_tree[:, N] - K, 0)
+    elif option_type == "put":
+        option_tree[:, N] = np.maximum(K - stock_tree[:, N], 0)
+
+    # Backward induction to calculate option price
+    for i in range(N - 1, -1, -1):
+        for j in range(i + 1):
+            continuation_value = np.exp(-r * dt) * (p * option_tree[j, i + 1] + (1 - p) * option_tree[j + 1, i + 1])
+            if option_type == "call":
+                exercise_value = stock_tree[j, i] - K
+            else:
+                exercise_value = K - stock_tree[j, i]
+            option_tree[j, i] = max(continuation_value, exercise_value)
+
+    return round(option_tree[0, 0], 4)
 
 def delta(S, K, T, r, sigma, option_type="call"):
     try:
@@ -179,29 +318,7 @@ if ticker:
                 price = binomial_tree(S,K,T,r,sigma,N,option_type)
 
             if st.button("Calculate Price"):
-                price = binomial_tree(S, K, T, r, sigma, N, option_type.lower())
                 st.success(f"💰 The {option_type} Option Price is: **${price}**")
-
-                greek_query = st.selectbox("Greeks and implied volatility?",["Yes","No"])
-
-                if greek_query == "Yes":
-                    st.subheader("Option Greeks:")
-
-                    col1, col2, col3, col4, col5 = st.columns(5)
-                    with col1:
-                        st.metric(label = "Delta",value = f"{delta(S, K, T, r, sigma, option_type):.2f}")
-                    with col2:
-                        st.metric(label ="Gamma",value = f"{gamma(S, K, T, r, sigma):.2f}")
-                    with col3:
-                        st.metric(label = "Theta",value= f"{theta(S, K, T, r, sigma, option_type):.2f}")
-                    with col4:
-                        st.metric(label = "Vega",value= f"{vega(S, K, T, r, sigma):.2f}")
-                    with col5:
-                        st.metric(label = "Rho",value = f"{rho(S, K, T, r, sigma, option_type):.2f}")
-                elif greek_query == "No":
-                    st.write("Ok no problem")
-
-
 
 
 
